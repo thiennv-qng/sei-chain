@@ -1,0 +1,1 @@
+export { DesigWalletConnector } from "./desigConnector";

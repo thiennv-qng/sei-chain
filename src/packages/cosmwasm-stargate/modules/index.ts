@@ -1,11 +1,11 @@
-export {
+export { createWasmAminoConverters } from "./wasm/aminomessages";
+export type {
   AminoMsgClearAdmin,
   AminoMsgExecuteContract,
   AminoMsgInstantiateContract,
   AminoMsgMigrateContract,
   AminoMsgStoreCode,
   AminoMsgUpdateAdmin,
-  createWasmAminoConverters,
 } from "./wasm/aminomessages";
 export {
   isMsgClearAdminEncodeObject,
@@ -15,6 +15,9 @@ export {
   isMsgMigrateEncodeObject,
   isMsgStoreCodeEncodeObject,
   isMsgUpdateAdminEncodeObject,
+  wasmTypes,
+} from "./wasm/messages";
+export type {
   MsgClearAdminEncodeObject,
   MsgExecuteContractEncodeObject,
   MsgInstantiateContract2EncodeObject,
@@ -22,6 +25,6 @@ export {
   MsgMigrateContractEncodeObject,
   MsgStoreCodeEncodeObject,
   MsgUpdateAdminEncodeObject,
-  wasmTypes,
 } from "./wasm/messages";
-export { JsonObject, setupWasmExtension, WasmExtension } from "./wasm/queries";
+export { setupWasmExtension } from "./wasm/queries";
+export type { JsonObject, WasmExtension } from "./wasm/queries";

@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
-import { fromBase64, fromUtf8, toBase64, toUtf8 } from "../encoding";
-import { AminoConverters, Coin } from "../stargate";
+import { fromBase64, fromUtf8, toBase64, toUtf8 } from "../../../encoding";
+import { AminoConverters, Coin } from "../../../stargate";
 import {
   MsgClearAdmin,
   MsgExecuteContract,
@@ -214,7 +214,9 @@ export function createWasmAminoConverters(): AminoConverters {
               permission: accessTypeToString(instantiatePermission.permission),
               address: instantiatePermission.address || undefined,
               addresses:
-                instantiatePermission.addresses.length !== 0 ? instantiatePermission.addresses : undefined,
+                instantiatePermission.addresses.length !== 0
+                  ? instantiatePermission.addresses
+                  : undefined,
             }
           : undefined,
       }),
@@ -227,7 +229,9 @@ export function createWasmAminoConverters(): AminoConverters {
         wasmByteCode: fromBase64(wasm_byte_code),
         instantiatePermission: instantiate_permission
           ? {
-              permission: accessTypeFromString(instantiate_permission.permission),
+              permission: accessTypeFromString(
+                instantiate_permission.permission
+              ),
               address: instantiate_permission.address ?? "",
               addresses: instantiate_permission.addresses ?? [],
             }
@@ -310,12 +314,20 @@ export function createWasmAminoConverters(): AminoConverters {
     },
     "/cosmwasm.wasm.v1.MsgUpdateAdmin": {
       aminoType: "wasm/MsgUpdateAdmin",
-      toAmino: ({ sender, newAdmin, contract }: MsgUpdateAdmin): AminoMsgUpdateAdmin["value"] => ({
+      toAmino: ({
+        sender,
+        newAdmin,
+        contract,
+      }: MsgUpdateAdmin): AminoMsgUpdateAdmin["value"] => ({
         sender: sender,
         new_admin: newAdmin,
         contract: contract,
       }),
-      fromAmino: ({ sender, new_admin, contract }: AminoMsgUpdateAdmin["value"]): MsgUpdateAdmin => ({
+      fromAmino: ({
+        sender,
+        new_admin,
+        contract,
+      }: AminoMsgUpdateAdmin["value"]): MsgUpdateAdmin => ({
         sender: sender,
         newAdmin: new_admin,
         contract: contract,
@@ -323,18 +335,29 @@ export function createWasmAminoConverters(): AminoConverters {
     },
     "/cosmwasm.wasm.v1.MsgClearAdmin": {
       aminoType: "wasm/MsgClearAdmin",
-      toAmino: ({ sender, contract }: MsgClearAdmin): AminoMsgClearAdmin["value"] => ({
+      toAmino: ({
+        sender,
+        contract,
+      }: MsgClearAdmin): AminoMsgClearAdmin["value"] => ({
         sender: sender,
         contract: contract,
       }),
-      fromAmino: ({ sender, contract }: AminoMsgClearAdmin["value"]): MsgClearAdmin => ({
+      fromAmino: ({
+        sender,
+        contract,
+      }: AminoMsgClearAdmin["value"]): MsgClearAdmin => ({
         sender: sender,
         contract: contract,
       }),
     },
     "/cosmwasm.wasm.v1.MsgExecuteContract": {
       aminoType: "wasm/MsgExecuteContract",
-      toAmino: ({ sender, contract, msg, funds }: MsgExecuteContract): AminoMsgExecuteContract["value"] => ({
+      toAmino: ({
+        sender,
+        contract,
+        msg,
+        funds,
+      }: MsgExecuteContract): AminoMsgExecuteContract["value"] => ({
         sender: sender,
         contract: contract,
         msg: JSON.parse(fromUtf8(msg)),
@@ -354,7 +377,12 @@ export function createWasmAminoConverters(): AminoConverters {
     },
     "/cosmwasm.wasm.v1.MsgMigrateContract": {
       aminoType: "wasm/MsgMigrateContract",
-      toAmino: ({ sender, contract, codeId, msg }: MsgMigrateContract): AminoMsgMigrateContract["value"] => ({
+      toAmino: ({
+        sender,
+        contract,
+        codeId,
+        msg,
+      }: MsgMigrateContract): AminoMsgMigrateContract["value"] => ({
         sender: sender,
         contract: contract,
         code_id: codeId.toString(),

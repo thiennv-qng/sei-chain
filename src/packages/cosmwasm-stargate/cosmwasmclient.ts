@@ -83,14 +83,22 @@ export interface ContractCodeHistoryEntry {
 export interface PrivateCosmWasmClient {
   readonly tmClient: TendermintClient | undefined;
   readonly queryClient:
-    | (QueryClient & AuthExtension & BankExtension & TxExtension & WasmExtension)
+    | (QueryClient &
+        AuthExtension &
+        BankExtension &
+        TxExtension &
+        WasmExtension)
     | undefined;
 }
 
 export class CosmWasmClient {
   private readonly tmClient: TendermintClient | undefined;
   private readonly queryClient:
-    | (QueryClient & AuthExtension & BankExtension & TxExtension & WasmExtension)
+    | (QueryClient &
+        AuthExtension &
+        BankExtension &
+        TxExtension &
+        WasmExtension)
     | undefined;
   private readonly codesCache = new Map<number, CodeDetails>();
   private chainId: string | undefined;
@@ -101,7 +109,9 @@ export class CosmWasmClient {
    * This uses auto-detection to decide between a Tendermint 0.37 and 0.34 client.
    * To set the Tendermint client explicitly, use `create`.
    */
-  public static async connect(endpoint: string | HttpEndpoint): Promise<CosmWasmClient> {
+  public static async connect(
+    endpoint: string | HttpEndpoint
+  ): Promise<CosmWasmClient> {
     // Tendermint/CometBFT 0.34/0.37 auto-detection. Starting with 0.37 we seem to get reliable versions again 🎉
     // Using 0.34 as the fallback.
     let tmClient: TendermintClient;
@@ -121,7 +131,9 @@ export class CosmWasmClient {
    * Creates an instance from a manually created Tendermint client.
    * Use this to use `Tendermint37Client` instead of `Tendermint34Client`.
    */
-  public static async create(tmClient: TendermintClient): Promise<CosmWasmClient> {
+  public static async create(
+    tmClient: TendermintClient
+  ): Promise<CosmWasmClient> {
     return new CosmWasmClient(tmClient);
   }
 
@@ -133,7 +145,7 @@ export class CosmWasmClient {
         setupAuthExtension,
         setupBankExtension,
         setupWasmExtension,
-        setupTxExtension,
+        setupTxExtension
       );
     }
   }
@@ -145,21 +157,31 @@ export class CosmWasmClient {
   protected forceGetTmClient(): TendermintClient {
     if (!this.tmClient) {
       throw new Error(
-        "Tendermint client not available. You cannot use online functionality in offline mode.",
+        "Tendermint client not available. You cannot use online functionality in offline mode."
       );
     }
     return this.tmClient;
   }
 
   protected getQueryClient():
-    | (QueryClient & AuthExtension & BankExtension & TxExtension & WasmExtension)
+    | (QueryClient &
+        AuthExtension &
+        BankExtension &
+        TxExtension &
+        WasmExtension)
     | undefined {
     return this.queryClient;
   }
 
-  protected forceGetQueryClient(): QueryClient & AuthExtension & BankExtension & TxExtension & WasmExtension {
+  protected forceGetQueryClient(): QueryClient &
+    AuthExtension &
+    BankExtension &
+    TxExtension &
+    WasmExtension {
     if (!this.queryClient) {
-      throw new Error("Query client not available. You cannot use online functionality in offline mode.");
+      throw new Error(
+        "Query client not available. You cannot use online functionality in offline mode."
+      );
     }
     return this.queryClient;
   }
@@ -182,7 +204,9 @@ export class CosmWasmClient {
 
   public async getAccount(searchAddress: string): Promise<Account | null> {
     try {
-      const account = await this.forceGetQueryClient().auth.account(searchAddress);
+      const account = await this.forceGetQueryClient().auth.account(
+        searchAddress
+      );
       return account ? accountFromAny(account) : null;
     } catch (error: any) {
       if (/rpc error: code = NotFound/i.test(error.toString())) {
@@ -196,7 +220,7 @@ export class CosmWasmClient {
     const account = await this.getAccount(address);
     if (!account) {
       throw new Error(
-        `Account '${address}' does not exist on chain. Send some tokens there before trying to query sequence.`,
+        `Account '${address}' does not exist on chain. Send some tokens there before trying to query sequence.`
       );
     }
     return {
@@ -238,7 +262,9 @@ export class CosmWasmClient {
     } else if (Array.isArray(query)) {
       rawQuery = query.map((t) => `${t.key}='${t.value}'`).join(" AND ");
     } else {
-      throw new Error("Got unsupported query type. See CosmJS 0.31 CHANGELOG for API breaking changes here.");
+      throw new Error(
+        "Got unsupported query type. See CosmJS 0.31 CHANGELOG for API breaking changes here."
+      );
     }
     return this.txsQuery(rawQuery);
   }
@@ -263,7 +289,7 @@ export class CosmWasmClient {
   public async broadcastTx(
     tx: Uint8Array,
     timeoutMs = 60_000,
-    pollIntervalMs = 3_000,
+    pollIntervalMs = 3_000
   ): Promise<DeliverTxResponse> {
     let timedOut = false;
     const txPollTimeout = setTimeout(() => {
@@ -276,7 +302,7 @@ export class CosmWasmClient {
           `Transaction with ID ${txId} was submitted but was not yet found on the chain. You might want to check later. There was a wait of ${
             timeoutMs / 1000
           } seconds.`,
-          txId,
+          txId
         );
       }
       await sleep(pollIntervalMs);
@@ -307,8 +333,8 @@ export class CosmWasmClient {
         (error) => {
           clearTimeout(txPollTimeout);
           reject(error);
-        },
-      ),
+        }
+      )
     );
   }
 
@@ -328,7 +354,11 @@ export class CosmWasmClient {
 
     if (broadcasted.code) {
       return Promise.reject(
-        new BroadcastTxError(broadcasted.code, broadcasted.codespace ?? "", broadcasted.log),
+        new BroadcastTxError(
+          broadcasted.code,
+          broadcasted.codespace ?? "",
+          broadcasted.log
+        )
       );
     }
 
@@ -356,7 +386,10 @@ export class CosmWasmClient {
     } while (startAtKey?.length !== 0);
 
     return allCodes.map((entry: CodeInfoResponse): Code => {
-      assert(entry.creator && entry.codeId && entry.dataHash, "entry incomplete");
+      assert(
+        entry.creator && entry.codeId && entry.dataHash,
+        "entry incomplete"
+      );
       return {
         id: entry.codeId.toNumber(),
         creator: entry.creator,
@@ -369,10 +402,16 @@ export class CosmWasmClient {
     const cached = this.codesCache.get(codeId);
     if (cached) return cached;
 
-    const { codeInfo, data } = await this.forceGetQueryClient().wasm.getCode(codeId);
+    const { codeInfo, data } = await this.forceGetQueryClient().wasm.getCode(
+      codeId
+    );
     assert(
-      codeInfo && codeInfo.codeId && codeInfo.creator && codeInfo.dataHash && data,
-      "codeInfo missing or incomplete",
+      codeInfo &&
+        codeInfo.codeId &&
+        codeInfo.creator &&
+        codeInfo.dataHash &&
+        data,
+      "codeInfo missing or incomplete"
     );
     const codeDetails: CodeDetails = {
       id: codeInfo.codeId.toNumber(),
@@ -395,7 +434,10 @@ export class CosmWasmClient {
     let startAtKey: Uint8Array | undefined = undefined;
     do {
       const { contracts, pagination }: QueryContractsByCodeResponse =
-        await this.forceGetQueryClient().wasm.listContractsByCodeId(codeId, startAtKey);
+        await this.forceGetQueryClient().wasm.listContractsByCodeId(
+          codeId,
+          startAtKey
+        );
       allContracts.push(...contracts);
       startAtKey = pagination?.nextKey;
     } while (startAtKey?.length !== 0 && startAtKey !== undefined);
@@ -412,7 +454,10 @@ export class CosmWasmClient {
     let startAtKey: Uint8Array | undefined = undefined;
     do {
       const { contractAddresses, pagination }: QueryContractsByCreatorResponse =
-        await this.forceGetQueryClient().wasm.listContractsByCreator(creator, startAtKey);
+        await this.forceGetQueryClient().wasm.listContractsByCreator(
+          creator,
+          startAtKey
+        );
       allContracts.push(...contractAddresses);
       startAtKey = pagination?.nextKey;
     } while (startAtKey?.length !== 0 && startAtKey !== undefined);
@@ -424,12 +469,15 @@ export class CosmWasmClient {
    * Throws an error if no contract was found at the address
    */
   public async getContract(address: string): Promise<Contract> {
-    const { address: retrievedAddress, contractInfo } = await this.forceGetQueryClient().wasm.getContractInfo(
-      address,
-    );
-    if (!contractInfo) throw new Error(`No contract found at address "${address}"`);
+    const { address: retrievedAddress, contractInfo } =
+      await this.forceGetQueryClient().wasm.getContractInfo(address);
+    if (!contractInfo)
+      throw new Error(`No contract found at address "${address}"`);
     assert(retrievedAddress, "address missing");
-    assert(contractInfo.codeId && contractInfo.creator && contractInfo.label, "contractInfo incomplete");
+    assert(
+      contractInfo.codeId && contractInfo.creator && contractInfo.label,
+      "contractInfo incomplete"
+    );
     return {
       address: retrievedAddress,
       codeId: contractInfo.codeId.toNumber(),
@@ -443,13 +491,21 @@ export class CosmWasmClient {
   /**
    * Throws an error if no contract was found at the address
    */
-  public async getContractCodeHistory(address: string): Promise<readonly ContractCodeHistoryEntry[]> {
-    const result = await this.forceGetQueryClient().wasm.getContractCodeHistory(address);
-    if (!result) throw new Error(`No contract history found for address "${address}"`);
+  public async getContractCodeHistory(
+    address: string
+  ): Promise<readonly ContractCodeHistoryEntry[]> {
+    const result = await this.forceGetQueryClient().wasm.getContractCodeHistory(
+      address
+    );
+    if (!result)
+      throw new Error(`No contract history found for address "${address}"`);
     const operations: Record<number, "Init" | "Genesis" | "Migrate"> = {
-      [ContractCodeHistoryOperationType.CONTRACT_CODE_HISTORY_OPERATION_TYPE_INIT]: "Init",
-      [ContractCodeHistoryOperationType.CONTRACT_CODE_HISTORY_OPERATION_TYPE_GENESIS]: "Genesis",
-      [ContractCodeHistoryOperationType.CONTRACT_CODE_HISTORY_OPERATION_TYPE_MIGRATE]: "Migrate",
+      [ContractCodeHistoryOperationType.CONTRACT_CODE_HISTORY_OPERATION_TYPE_INIT]:
+        "Init",
+      [ContractCodeHistoryOperationType.CONTRACT_CODE_HISTORY_OPERATION_TYPE_GENESIS]:
+        "Genesis",
+      [ContractCodeHistoryOperationType.CONTRACT_CODE_HISTORY_OPERATION_TYPE_MIGRATE]:
+        "Migrate",
     };
     return (result.entries || []).map((entry): ContractCodeHistoryEntry => {
       assert(entry.operation && entry.codeId && entry.msg);
@@ -467,11 +523,17 @@ export class CosmWasmClient {
    *
    * Promise is rejected when contract does not exist.
    */
-  public async queryContractRaw(address: string, key: Uint8Array): Promise<Uint8Array | null> {
+  public async queryContractRaw(
+    address: string,
+    key: Uint8Array
+  ): Promise<Uint8Array | null> {
     // just test contract existence
     await this.getContract(address);
 
-    const { data } = await this.forceGetQueryClient().wasm.queryContractRaw(address, key);
+    const { data } = await this.forceGetQueryClient().wasm.queryContractRaw(
+      address,
+      key
+    );
     return data ?? null;
   }
 
@@ -482,9 +544,15 @@ export class CosmWasmClient {
    * Promise is rejected for invalid query format.
    * Promise is rejected for invalid response format.
    */
-  public async queryContractSmart(address: string, queryMsg: JsonObject): Promise<JsonObject> {
+  public async queryContractSmart(
+    address: string,
+    queryMsg: JsonObject
+  ): Promise<JsonObject> {
     try {
-      return await this.forceGetQueryClient().wasm.queryContractSmart(address, queryMsg);
+      return await this.forceGetQueryClient().wasm.queryContractSmart(
+        address,
+        queryMsg
+      );
     } catch (error) {
       if (error instanceof Error) {
         if (error.message.startsWith("not found: contract")) {
