@@ -1,0 +1,8 @@
+.caption {
+  @apply text-[12px];
+}
+.text {
+  &-secondary {
+    @apply text-slate-400;
+  }
+}
