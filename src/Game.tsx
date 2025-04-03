@@ -1,8 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Phaser, { GameObjects } from "phaser";
 import { htmlToImageURL } from "./utils/screenshot";
 import { deepClone } from "./utils";
 import clsx from "clsx";
+
+const SCREEN_COLS = 8;
+const ELEMENT_GAP = 16;
+const CARD_BASE_WIDTH = 268;
+const CARD_BASE_HEIGHT = 192;
+let count_index = 0;
 
 export default function Game() {
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -13,6 +19,11 @@ export default function Game() {
   const [loadingHomeUrl, setLoadingHomeUrl] = useState(false);
   const [loadingWayUrl, setLoadingWayUrl] = useState(false);
   const [target, setTarget] = useState({ h: 0, w: 0 });
+
+  const isLoading = useMemo(
+    () => loadingHomeUrl || loadingWayUrl,
+    [loadingHomeUrl, loadingWayUrl]
+  );
 
   const genCardHomeUrl = useCallback(async () => {
     try {
@@ -88,6 +99,7 @@ export default function Game() {
           `card_home_${home_idx}`
         );
         cardHome.setDisplaySize(cardWidth, cardHeight);
+
         const positionX = home_idx * cardWidth + cardWidth / 2;
         const offsetX = 16 * home_idx + homeOffset;
 
@@ -95,7 +107,7 @@ export default function Game() {
           targets: cardHome,
           x: positionX + offsetX,
           y: cardHeight / 2 + 16,
-          duration: 800,
+          duration: 500,
           ease: "Power2",
           delay: home_idx * 200,
           onComplete: () => scene.events.emit("card_home_tweens_completed"),
@@ -145,6 +157,86 @@ export default function Game() {
     []
   );
 
+  const renderHitEffect = useCallback(
+    (
+      card: GameObjects.Image,
+      callback = () => {
+        /** empty function */
+      }
+    ) => {
+      if (!sceneRef.current) return;
+      const scene = sceneRef.current;
+
+      const { width } = scene.scale;
+      const cardWidth = width / SCREEN_COLS - ELEMENT_GAP;
+      const cardHeight = (cardWidth * CARD_BASE_WIDTH) / CARD_BASE_HEIGHT;
+      const targetX = card.x;
+      const targetY = card.y;
+
+      const boom = scene.add.sprite(targetX, targetY, "boom");
+      boom.setDisplaySize(cardWidth, cardHeight);
+      boom.setDepth(999);
+
+      if (!scene.anims.exists("hitting"))
+        scene.anims.create({
+          key: "hitting",
+          frames: scene.anims.generateFrameNumbers("boom", {
+            start: 0,
+            end: 4,
+          }),
+          frameRate: 12,
+          repeat: 0,
+          hideOnComplete: true,
+        });
+
+      boom.play("hitting");
+      boom.on("animationcomplete", () => {
+        boom.destroy(true);
+        callback();
+      });
+    },
+    []
+  );
+
+  const renderHPPoint = useCallback(
+    (
+      card: GameObjects.Image,
+      callback = () => {
+        /** empty function */
+      }
+    ) => {
+      if (!sceneRef.current) return;
+      const scene = sceneRef.current;
+
+      const { width } = scene.scale;
+      const cardWidth = width / SCREEN_COLS - ELEMENT_GAP;
+      const cardHeight = (cardWidth * CARD_BASE_WIDTH) / CARD_BASE_HEIGHT;
+      const targetX = card.x;
+      const targetY = card.y;
+
+      const hp = scene.add.text(targetX - cardWidth / 2, targetY, "-100", {
+        fontSize: 18,
+        color: "red",
+        fixedWidth: cardWidth,
+        align: "center",
+      });
+
+      scene.tweens.add({
+        targets: hp,
+        alpha: { from: 1, to: 0.7 },
+        y: targetY - cardHeight / 3,
+        duration: 500,
+        ease: "Power2",
+        onComplete: () => {
+          callback();
+          hp.destroy(true);
+        },
+        depth: 998,
+      });
+    },
+    []
+  );
+
   const onAttack = useCallback(
     (boss: "home" | "way", target: { h: number; w: number }) => {
       if (!sceneRef.current) return;
@@ -152,8 +244,8 @@ export default function Game() {
       const scene = sceneRef.current;
 
       const { width } = scene.scale;
-      const cardWidth = width / 8 - 16;
-      const cardHeight = (cardWidth * 268) / 192;
+      const cardWidth = width / SCREEN_COLS - ELEMENT_GAP;
+      const cardHeight = (cardWidth * CARD_BASE_WIDTH) / CARD_BASE_HEIGHT;
 
       const cardHome = scene.children.list.find(
         (child) =>
@@ -168,6 +260,8 @@ export default function Game() {
       ) as Phaser.GameObjects.Image | undefined;
 
       if (cardHome && cardWay) {
+        count_index++;
+
         const cardBoss = boss === "home" ? cardHome : cardWay;
         const cardTarget = boss === "home" ? cardWay : cardHome;
         const indicator = boss === "home" ? -1 : 1;
@@ -175,27 +269,46 @@ export default function Game() {
         const oldPx = cardBoss.x;
         const oldPy = cardBoss.y;
         const targetX = cardTarget.x;
-        const targetY = cardTarget.y + (cardHeight + 4) * indicator;
+        const targetY = cardTarget.y + cardHeight * 0.75 * indicator;
+        const initialScaleX = cardBoss.scaleX;
+        const initialScaleY = cardBoss.scaleY;
+        const initialDepth = cardBoss.depth;
 
         scene.tweens.add({
           targets: cardBoss,
-          x: targetX,
-          y: targetY,
-          duration: 500,
-          ease: "Power3",
+          scaleX: initialScaleX + initialScaleX / 10,
+          scaleY: initialScaleY + initialScaleY / 10,
+          duration: 300,
+          ease: "Power2",
+          depth: 99 + count_index,
           onComplete: () => {
             scene.tweens.add({
               targets: cardBoss,
-              x: oldPx,
-              y: oldPy,
-              duration: 300,
-              ease: "Power2",
+              scaleX: initialScaleX,
+              scaleY: initialScaleY,
+              x: targetX,
+              y: targetY,
+              duration: 200,
+              ease: "Power3",
+              onComplete: () => {
+                renderHitEffect(cardTarget, () =>
+                  scene.tweens.add({
+                    targets: cardBoss,
+                    x: oldPx,
+                    y: oldPy,
+                    duration: 300,
+                    ease: "Power2",
+                    depth: initialDepth,
+                  })
+                );
+                renderHPPoint(cardTarget);
+              },
             });
           },
         });
       }
     },
-    []
+    [renderHPPoint, renderHitEffect]
   );
 
   useEffect(() => {
@@ -219,47 +332,70 @@ export default function Game() {
 
     function preload(this: Phaser.Scene) {
       this.load.image("arena", "/imgs/background.png");
+      // bear
       this.load.spritesheet("frame", "/imgs/frame.png", {
         frameWidth: 3168 / 6,
         frameHeight: 867,
       });
+      // boom
+      this.load.spritesheet("boom", "/imgs/boom.png", {
+        frameWidth: 500 / 5,
+        frameHeight: 90,
+      });
     }
 
     function create(this: Phaser.Scene) {
-      sceneRef.current = this; // Lưu Scene để cập nhật khi có dữ liệu mới
+      sceneRef.current = this;
 
       const { width, height } = this.scale;
-      const cardWidth = width / 8 - 16;
-      const cardHeight = (cardWidth * 268) / 192;
+      const cardWidth = width / SCREEN_COLS - ELEMENT_GAP;
+      const cardHeight = (cardWidth * CARD_BASE_WIDTH) / CARD_BASE_HEIGHT;
 
-      // Background
-      const background = this.add.image(width / 2, height / 2, "arena");
-      background.setDisplaySize(width, width);
+      if (!this.data.get("background")) {
+        const background = this.add.image(width / 2, height / 2, "arena");
+        background.setDisplaySize(width, width);
+        this.data.set("background", background);
+      }
 
-      // Bear
-      const bear = this.add.sprite(cardWidth / 2 + 16, height / 2, "frame");
-      bear.setDisplaySize(cardWidth, cardHeight);
-      this.anims.create({
-        key: "walk",
-        frames: this.anims.generateFrameNumbers("frame", { start: 0, end: 5 }),
-        frameRate: 12,
-        repeat: -1,
-      });
+      if (!this.data.get("bear")) {
+        const bear = this.add.sprite(cardWidth / 2 + 16, height / 2, "frame");
+        bear.setDisplaySize(cardWidth, cardHeight);
 
-      this.input.keyboard?.on("keydown-D", () => {
-        if (bear.anims.isPaused) return bear.anims.resume();
-        if (!bear.anims.isPlaying) bear.play("walk");
-      });
+        this.anims.create({
+          key: "walk",
+          frames: this.anims.generateFrameNumbers("frame", {
+            start: 0,
+            end: 5,
+          }),
+          frameRate: 12,
+          repeat: -1,
+        });
 
-      this.input.keyboard?.on("keyup-D", () => {
-        bear.anims.pause();
-      });
+        this.input.keyboard?.on("keydown-D", () => {
+          if (bear.anims.isPaused) return bear.anims.resume();
+          if (!bear.anims.isPlaying) bear.play("walk");
+        });
+
+        this.input.keyboard?.on("keyup-D", () => {
+          bear.anims.pause();
+        });
+        this.data.set("bear", bear);
+      }
+
+      homeCardUrls.forEach((url, idx) =>
+        this.load.image(`card_home_${idx}`, url)
+      );
+      wayCardUrls.forEach((url, idx) =>
+        this.load.image(`card_way_${idx}`, url)
+      );
+
+      renderCards(this, homeCardUrls, wayCardUrls);
     }
 
     return () => {
       game.destroy(true);
     };
-  }, []);
+  }, [homeCardUrls, isLoading, renderCards, wayCardUrls]);
 
   // controller
   useEffect(() => {
@@ -272,36 +408,26 @@ export default function Game() {
     }
   }, [range]);
 
-  // load home card
-  useEffect(() => {
-    if (!sceneRef.current) return;
-    const scene = sceneRef.current;
-    homeCardUrls.forEach((url, idx) =>
-      scene.load.image(`card_home_${idx}`, url)
-    );
-    scene.load.start();
-  }, [homeCardUrls]);
+  // useEffect(() => {
+  //   if (!sceneRef.current) return;
+  //   const scene = sceneRef.current;
+  //   homeCardUrls.forEach((url, idx) =>
+  //     scene.load.image(`card_home_${idx}`, url)
+  //   );
+  //   wayCardUrls.forEach((url, idx) => scene.load.image(`card_way_${idx}`, url));
 
-  // load way card
-  useEffect(() => {
-    if (!sceneRef.current) return;
-    const scene = sceneRef.current;
-    wayCardUrls.forEach((url, idx) => scene.load.image(`card_way_${idx}`, url));
-    scene.load.start();
-  }, [wayCardUrls]);
+  //   scene.load.start();
 
-  // render card when loading completed
-  useEffect(() => {
-    if (!sceneRef.current || loadingHomeUrl || loadingWayUrl) return;
-    const scene = sceneRef.current;
+  //   scene.load.on("complete", () => {
+  //     const isRendered = scene.data.get("cards_loader");
+  //     if (!isRendered && !isLoading) {
+  //       renderCards(scene, homeCardUrls, wayCardUrls);
+  //       scene.data.set("cards_loader", true);
+  //     }
 
-    scene.load.once("complete", () => {
-      if (sceneRef.current) {
-        renderCards(sceneRef.current, homeCardUrls, wayCardUrls);
-        scene.load.off("complete");
-      }
-    });
-  }, [homeCardUrls, loadingHomeUrl, loadingWayUrl, renderCards, wayCardUrls]);
+  //     scene.load.off("complete");
+  //   });
+  // }, [homeCardUrls, isLoading, renderCards, wayCardUrls]);
 
   return (
     <div className="flex flex-col gap-4 w-screen bg-slate-200 p-6">
